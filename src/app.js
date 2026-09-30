@@ -41,9 +41,11 @@ function createApp(config) {
   app.use(helmet());
   app.use(express.json({ limit: config.bodyLimit }));
 
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', service: 'api-node' });
-  });
+  // * GET / y GET /health responden 200: los balanceadores (p. ej. ECS Express Mode) hacen el health check
+  // * en "/" por defecto; así el servicio queda sano con cualquier configuración.
+  const health = (req, res) => res.json({ status: 'ok', service: 'api-node' });
+  app.get('/', health);
+  app.get('/health', health);
 
   // ! Rutas de negocio siempre detrás de requireJwt.
   app.use('/api/v1', statisticsRoutes({ auth: requireJwt(config), controller }));

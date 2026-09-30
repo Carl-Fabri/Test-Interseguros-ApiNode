@@ -5,8 +5,8 @@ const { testConfig } = require('../helpers/testConfig');
 const app = createApp(testConfig);
 
 describe('rutas públicas', () => {
-  it('GET /health responde 200 sin token', async () => {
-    const res = await request(app).get('/health');
+  it.each(['/health', '/'])('GET %s responde 200 sin token (health check del balanceador)', async (path) => {
+    const res = await request(app).get(path);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok', service: 'api-node' });

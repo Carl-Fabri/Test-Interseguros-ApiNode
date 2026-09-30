@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: api-node · Estadísticas de matrices
+  version: 1.0.0
+  description: |
+    Servicio autónomo (Node.js + Express 5) que recibe matrices y calcula, en una sola
+    pasada: **valor máximo, mínimo, promedio, suma total** y si **alguna matriz es diagonal**.
+
+    Lo consume api-go con las matrices Q y R de la factorización QR, pero sirve a cualquier
+    cliente autenticado.
+
+    **Autenticación:** JWT HS256 emitido por api-go (`POST /api/v1/auth/login` de api-go),
+    enviado como `Authorization: Bearer <token>`.
+
+    **Matriz diagonal:** todos los elementos con i ≠ j valen cero (con tolerancia
+    `DIAGONAL_TOLERANCE`, 1e-10 por defecto, para absorber el error de coma flotante).
+    Se admite la definición rectangular (m×n).
+servers:
+  - url: http://localhost:3000
+    description: Local / Docker
+tags:
+  - name: Statistics
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Estado del servicio
+      security: []
+      responses:
+        "200":
+          description: El servicio está activo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+
+  /api/v1/statistics:
+    post:
+      tags: [Statistics]
+      summary: Estadísticas de un conjunto de matrices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatisticsRequest" }
+            example:
+              matrices:
+                - name: Q
+                  values: [[1, 0], [0, 1]]
+                - name: R
+                  values: [[2, 3], [0, 4]]
+      responses:
+        "200":
+          description: Estadísticas calculadas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatisticsResponse" }
+              example:
+                max: 4
+                min: 0
+                average: 1.375
+                sum: 11
+                count: 8
+                anyDiagonal: true
+                matrices:
+                  - { name: Q, isDiagonal: true }
+                  - { name: R, isDiagonal: false }
+        "400":
+          description: Cuerpo inválido (`INVALID_REQUEST`) o matrices inválidas (`INVALID_MATRIX`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Token ausente, inválido o expirado (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "413":
+          description: Cuerpo demasiado grande (`PAYLOAD_TOO_LARGE`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    StatisticsRequest:
+      type: object
+      required: [matrices]
+      properties:
+        matrices:
+          type: array
+          minItems: 1
+          maxItems: 10
+          description: Hasta MAX_MATRICES matrices (10 por defecto).
+          items: { $ref: "#/components/schemas/NamedMatrix" }
+
+    NamedMatrix:
+      type: object
+      required: [values]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Identificador de la matriz. Si se omite se asigna "M1", "M2", ...
+        values:
+          type: array
+          description: Matriz rectangular de hasta MATRIX_MAX_DIMENSION filas y columnas (100 por defecto).
+          minItems: 1
+          items:
+            type: array
+            minItems: 1
+            items: { type: number }
+
+    StatisticsResponse:
+      type: object
+      required: [max, min, average, sum, count, anyDiagonal, matrices]
+      properties:
+        max: { type: number, description: Valor máximo de todas las matrices }
+        min: { type: number, description: Valor mínimo de todas las matrices }
+        average: { type: number, description: Promedio de todos los valores }
+        sum: { type: number, description: Suma total de todos los valores }
+        count: { type: integer, description: Cantidad total de valores }
+        anyDiagonal: { type: boolean, description: true si alguna matriz es diagonal }
+        matrices:
+          type: array
+          items:
+            type: object
+            required: [name, isDiagonal]
+            properties:
+              name: { type: string }
+              isDiagonal: { type: boolean }
+
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status: { type: string, const: ok }
+        service: { type: string }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [INVALID_REQUEST, INVALID_MATRIX, UNAUTHORIZED, NOT_FOUND, PAYLOAD_TOO_LARGE, INTERNAL_ERROR]
+            message: { type: string }

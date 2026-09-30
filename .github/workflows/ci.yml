@@ -1,0 +1,45 @@
+# CI de api-node (repositorio propio).
+# Costo mínimo: un solo job, sin despliegues ni publicación de imágenes (no usa servicios de AWS),
+# ignora cambios solo de documentación y cancela ejecuciones anteriores de la misma rama.
+name: api-node CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**", "specs/**", ".specify/**", ".claude/**", "deploy/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**", "specs/**", ".specify/**", ".claude/**", "deploy/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Pruebas y build Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas unitarias
+        run: npm run test:unit -- --coverage
+
+      - name: Pruebas de integración
+        run: npm run test:integration
+
+      # Solo verifica que la imagen compila; no se publica en ningún registro.
+      - name: Build de la imagen Docker
+        run: docker build -t api-node:ci .

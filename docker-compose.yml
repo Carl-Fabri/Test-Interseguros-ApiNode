@@ -1,0 +1,12 @@
+# Ejecución AISLADA de api-node (no requiere el resto del repositorio).
+services:
+  api-node:
+    build: .
+    image: api-node:latest
+    container_name: api-node
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file: .env
+    environment:
+      PORT: 3000
+    restart: unless-stopped

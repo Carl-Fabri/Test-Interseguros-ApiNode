@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+tests/
+.claude/
+Dockerfile
+.dockerignore
+.env
+skills-lock.json
+deploy/

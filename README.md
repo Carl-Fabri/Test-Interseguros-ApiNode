@@ -202,7 +202,7 @@ PARAM_OVERRIDES="DesiredCount=2 LogLevel=debug" ./deploy/aws/deploy.sh   # con p
 En AWS, `JWT_SECRET` viene de **Secrets Manager** (el mismo que usa api-go) y `CORS_ALLOWED_ORIGINS` se calcula a
 partir del ALB. Parámetros de [`deploy/aws/service.yml`](deploy/aws/service.yml): `Cpu`, `Memory`, `DesiredCount` y `LogLevel`.
 
-**¿Usas ECS Express Mode desde la consola?** Sigue [docs/deploy/aws-express.md](docs/deploy/aws-express.md): puerto del contenedor, ruta del health check y variables de cada servicio.
+**¿Usas ECS Express Mode desde la consola?** Usa `./deploy/aws/express-deploy.sh` (configura puerto, health check, variables y secretos, y tiene un modo `diagnose`) y consulta [docs/deploy/aws-express.md](docs/deploy/aws-express.md).
 
 **Costo y limpieza.** Los tres servicios comparten un solo balanceador y usan Fargate Spot: ≈ US$ 45 al mes si quedan
 encendidos 24/7 y centavos para una demo de horas ([detalle](docs/deploy/aws.md#4-costos-estimados)). Pausar:
